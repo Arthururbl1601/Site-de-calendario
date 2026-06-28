@@ -54,6 +54,7 @@ export default function Calendar() {
   const [ownerPasswordInput, setOwnerPasswordInput] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [editingDay, setEditingDay] = useState<{ year: number; month: number; day: number } | null>(null);
+  const [showEmails, setShowEmails] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const hiddenButtonClickCount = useRef(0);
@@ -109,6 +110,12 @@ export default function Calendar() {
       <header className="sticky top-0 z-20 bg-white border-b shadow-sm px-4 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-800">📅 Calendario das AV3 CEAM</h1>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowEmails(true)}
+            className="px-3 py-1 rounded-full text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            Emails
+          </button>
           {isOwner && (
             <button
               onClick={() => { setEditMode(!editMode); }}
@@ -196,6 +203,14 @@ export default function Calendar() {
           day={editingDay.day}
           onClose={() => setEditingDay(null)}
           upsertDayData={upsertDayData}
+        />
+      )}
+
+      {/* Emails modal */}
+      {showEmails && (
+        <EmailsModal
+          isOwner={isOwner}
+          onClose={() => setShowEmails(false)}
         />
       )}
 
@@ -535,6 +550,105 @@ function EditDayModal({
           >
             {saving ? "Salvando…" : "Salvar"}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Emails Modal ────────────────────────────────────────────────────────────
+
+type EmailEntry = { id: string; name: string; email: string };
+
+function EmailsModal({ isOwner, onClose }: { isOwner: boolean; onClose: () => void }) {
+  const [entries, setEntries] = useState<EmailEntry[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("ceam_emails") ?? "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [saving, setSaving] = useState(false);
+
+  const save = (updated: EmailEntry[]) => {
+    setEntries(updated);
+    localStorage.setItem("ceam_emails", JSON.stringify(updated));
+  };
+
+  const addEntry = () => {
+    save([...entries, { id: crypto.randomUUID(), name: "", email: "" }]);
+  };
+
+  const updateEntry = (id: string, field: "name" | "email", value: string) => {
+    save(entries.map((e) => (e.id === id ? { ...e, [field]: value } : e)));
+  };
+
+  const removeEntry = (id: string) => {
+    save(entries.filter((e) => e.id !== id));
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <h3 className="text-lg font-bold text-gray-800">📧 Emails dos Professores</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+          {entries.length === 0 && !isOwner && (
+            <div className="text-center py-10 text-gray-400">
+              <div className="text-4xl mb-2">📭</div>
+              <p className="text-sm">Nenhum email cadastrado ainda.</p>
+            </div>
+          )}
+
+          {entries.map((entry) => (
+            <div key={entry.id} className="border rounded-xl p-3 bg-gray-50 flex flex-col gap-2">
+              {isOwner ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nome do professor"
+                      value={entry.name}
+                      onChange={(e) => updateEntry(entry.id, "name", e.target.value)}
+                      className="flex-1 border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                    <button onClick={() => removeEntry(entry.id)} className="text-red-400 hover:text-red-600 text-lg leading-none">✕</button>
+                  </div>
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={entry.email}
+                    onChange={(e) => updateEntry(entry.id, "email", e.target.value)}
+                    className="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">{entry.name || "Professor"}</p>
+                  <a href={`mailto:${entry.email}`} className="text-blue-600 hover:underline text-sm">{entry.email}</a>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {isOwner && (
+            <button
+              onClick={addEntry}
+              className="flex items-center justify-center gap-2 border-2 border-dashed border-blue-300 rounded-xl py-2.5 text-blue-500 hover:bg-blue-50 transition-colors text-sm font-medium"
+            >
+              + Adicionar Professor
+            </button>
+          )}
+
+          {!isOwner && entries.length > 0 && (
+            <p className="text-xs text-center text-gray-400 mt-2">Clique no email para enviar uma mensagem.</p>
+          )}
         </div>
       </div>
     </div>
