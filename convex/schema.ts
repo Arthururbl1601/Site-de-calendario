@@ -21,13 +21,6 @@ const applicationTables = {
     key: v.string(), // "owner_password"
     value: v.string(),
   }).index("by_key", ["key"]),
-
-  professors: defineTable({
-    id: v.string(),
-    name: v.string(),
-    email: v.string(),
-    order: v.number(),
-  }),
 };
 
 export default defineSchema({

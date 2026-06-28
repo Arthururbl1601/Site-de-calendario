@@ -73,30 +73,6 @@ export const upsertDayData = mutation({
   },
 });
 
-export const getProfessors = query({
-  args: {},
-  handler: async (ctx) => {
-    const docs = await ctx.db.query("professors").collect();
-    return docs.sort((a, b) => a.order - b.order);
-  },
-});
-
-export const saveProfessors = mutation({
-  args: {
-    professors: v.array(v.object({ id: v.string(), name: v.string(), email: v.string(), order: v.number() })),
-    ownerPassword: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const expectedPassword = process.env.OWNER_PASSWORD ?? "jose";
-    if (args.ownerPassword !== expectedPassword) throw new Error("Unauthorized");
-
-    const existing = await ctx.db.query("professors").collect();
-    for (const doc of existing) await ctx.db.delete(doc._id);
-    for (const p of args.professors) await ctx.db.insert("professors", p);
-    return null;
-  },
-});
-
 export const setOwnerPassword = mutation({
   args: { password: v.string() },
   handler: async (ctx, args) => {
